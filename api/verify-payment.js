@@ -1,34 +1,35 @@
-const crypto = require('crypto');
-const Razorpay = require('razorpay');
-const { google } = require('googleapis');
+const jwt = require('jsonwebtoken');
+const { getDb } = require('./db');
+
+function verifyAdmin(req) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return null;
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    return user.role === 'admin' ? user : null;
+  } catch { return null; }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { payment_id, order_id, signature, product_id } = req.body;
-  const generatedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-    .update(order_id + '|' + payment_id).digest('hex');
-  if (generatedSignature !== signature) return res.status(400).json({ success: false, error: 'Invalid signature' });
+  const admin = verifyAdmin(req);
+  if (!admin) return res.status(403).json({ error: 'Admin access required' });
+
+  const { order_id, action } = req.body;
+  if (!order_id || !['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ error: 'order_id and action (approve/reject) required' });
+  }
+
   try {
-    const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-    const payment = await razorpay.payments.fetch(payment_id);
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, null,
-      process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/spreadsheets']
+    const db = await getDb();
+    const newStatus = action === 'approve' ? 'verified' : 'rejected';
+    const result = await db.collection('orders').updateOne(
+      { order_id, status: 'pending' },
+      { $set: { status: newStatus, verified_at: new Date().toISOString(), verified_by: admin.email } }
     );
-    const sheets = google.sheets({ version: 'v4', auth });
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: process.env.SPREADSHEET_ID, range: 'Orders!A:G',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [[order_id, payment.email, product_id, payment.amount/100, payment_id, 'captured', new Date().toISOString()]] },
-    });
-    const productRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.SPREADSHEET_ID, range: 'Products!A:E',
-    });
-    const products = (productRes.data.values || []).slice(1);
-    const product = products.find(p => p[0] === product_id);
-    res.status(200).json({ success: true, download_link: product ? product[4] : null });
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Order not found or already processed' });
+    res.status(200).json({ success: true, status: newStatus });
   } catch (err) {
-    res.status(200).json({ success: false, error: 'Verification failed' });
+    res.status(500).json({ error: 'Failed to update order' });
   }
 }
