@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - NexusHub</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav><div class="nav-brand">🎮 NexusHub</div><a href="index.html">← Back</a></nav>
+  <main>
+    <div class="auth-container">
+      <h2>Create Account</h2>
+      <form id="signupForm">
+        <input type="text" id="signupName" placeholder="Full Name" required>
+        <input type="email" id="signupEmail" placeholder="Email" required>
+        <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" required minlength="6">
+        <button type="submit" class="btn-primary">Sign Up</button>
+      </form>
+      <p>Already have an account? <a href="login.html">Login</a></p>
+      <div id="signupMessage"></div>
+    </div>
+  </main>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
