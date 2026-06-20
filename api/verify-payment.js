@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('./db');
+const { sendBuyerApprovalEmail } = require('./mailer');
 
 function verifyAdmin(req) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -23,11 +24,22 @@ export default async function handler(req, res) {
   try {
     const db = await getDb();
     const newStatus = action === 'approve' ? 'verified' : 'rejected';
-    const result = await db.collection('orders').updateOne(
-      { order_id, status: 'pending' },
+    const order = await db.collection('orders').findOne({ order_id, status: 'pending' });
+    if (!order) return res.status(404).json({ error: 'Order not found or already processed' });
+
+    await db.collection('orders').updateOne(
+      { order_id },
       { $set: { status: newStatus, verified_at: new Date().toISOString(), verified_by: admin.email } }
     );
-    if (result.matchedCount === 0) return res.status(404).json({ error: 'Order not found or already processed' });
+
+    // Email buyer — fire and forget
+    sendBuyerApprovalEmail({
+      email: order.email,
+      product_name: order.product_name,
+      order_id,
+      status: newStatus
+    }).catch(() => {});
+
     res.status(200).json({ success: true, status: newStatus });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order' });
