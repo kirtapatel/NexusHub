@@ -1,32 +1,38 @@
-const Razorpay = require('razorpay');
-const { google } = require('googleapis');
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
+const { getDb } = require('./db');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Login required' });
   try {
-    const { product_id } = req.body;
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, null,
-      process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/spreadsheets']
-    );
-    const sheets = google.sheets({ version: 'v4', auth });
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.SPREADSHEET_ID, range: 'Products!A:D',
-    });
-    const products = (response.data.values || []).slice(1);
-    const product = products.find(p => p[0] === product_id);
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    const { product_id, utr_number } = req.body;
+    if (!product_id || !utr_number) return res.status(400).json({ error: 'product_id and utr_number are required' });
+
+    const db = await getDb();
+    const product = await db.collection('products').findOne({ product_id });
     if (!product) return res.status(404).json({ error: 'Product not found' });
-    const amount = parseInt(product[3]) * 100;
-    const order = await razorpay.orders.create({
-      amount, currency: 'INR', receipt: `receipt_${Date.now()}`, payment_capture: 1,
+
+    // Prevent duplicate UTR submissions
+    const duplicate = await db.collection('orders').findOne({ utr_number });
+    if (duplicate) return res.status(409).json({ error: 'This UTR has already been submitted' });
+
+    const order_id = 'ORD_' + uuidv4().replace(/-/g, '').slice(0, 12).toUpperCase();
+    await db.collection('orders').insertOne({
+      order_id,
+      email: user.email,
+      user_id: user.user_id,
+      product_id,
+      product_name: product.name,
+      amount: product.price,
+      utr_number,
+      status: 'pending',
+      created_at: new Date().toISOString()
     });
-    res.status(200).json({ id: order.id, amount: order.amount, key_id: process.env.RAZORPAY_KEY_ID });
+
+    res.status(200).json({ success: true, order_id, message: 'Payment submitted for verification. You will get access once admin approves.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create order' });
   }
