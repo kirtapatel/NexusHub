@@ -18,25 +18,32 @@
   </nav>
 
   <div class="admin-layout">
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
       <button class="tab-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn" onclick="showTab('payments')">💳 Payments</button>
       <button class="tab-btn" onclick="showTab('products')">📦 Products</button>
       <button class="tab-btn" onclick="showTab('users')">👥 Users</button>
       <button class="tab-btn" onclick="showTab('orders')">🛒 Orders</button>
     </aside>
 
-    <!-- Main content -->
     <main class="admin-main">
 
       <!-- Dashboard Tab -->
       <div id="tab-dashboard" class="tab-content">
         <h2>Dashboard</h2>
-        <div class="stats-grid" id="statsGrid">
-          <div class="stat-card loading">Loading...</div>
-        </div>
+        <div class="stats-grid" id="statsGrid"><div class="stat-card loading">Loading...</div></div>
         <h3 style="margin-top:2rem;">Recent Orders</h3>
         <div id="recentOrders"><p>Loading...</p></div>
+      </div>
+
+      <!-- Payments Tab -->
+      <div id="tab-payments" class="tab-content hidden">
+        <div class="tab-header">
+          <h2>Pending Payment Verifications</h2>
+          <button class="btn-primary btn-sm" onclick="loadPendingPayments()">🔄 Refresh</button>
+        </div>
+        <p style="color:#9ca3af;font-size:.9rem;margin-bottom:16px;">Review UTR numbers submitted by users. Approve to grant download access, or Reject to decline.</p>
+        <div id="paymentsTable"><p>Loading...</p></div>
       </div>
 
       <!-- Products Tab -->
@@ -71,7 +78,7 @@
         <button onclick="closeProductModal()" class="modal-close">✕</button>
       </div>
       <form id="productForm">
-        <input type="hidden" id="productRowIndex">
+        <input type="hidden" id="productId">
         <label>Product ID <span class="required">*</span></label>
         <input type="text" id="pProductId" placeholder="e.g. prod_001" required>
         <label>Name <span class="required">*</span></label>
