@@ -1,8 +1,7 @@
 {
   "name": "nexushub-api",
   "dependencies": {
-    "googleapis": "^128.0.0",
-    "razorpay": "^2.9.2",
+    "mongodb": "^6.3.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.0",
     "uuid": "^9.0.0"
