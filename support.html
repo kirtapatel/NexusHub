@@ -5,13 +5,208 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Support - NexusHub</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .ticket-form{background:#12122a;padding:2rem;border-radius:12px;margin-bottom:2rem}
+    .ticket-form h3{color:#7c3aed;margin-bottom:1rem}
+    select{width:100%;padding:.8rem;margin:.5rem 0;border-radius:8px;border:1px solid #333;background:#1a1a3a;color:#fff;font-size:1rem}
+    textarea{width:100%;padding:.8rem;margin:.5rem 0;border-radius:8px;border:1px solid #333;background:#1a1a3a;color:#fff;font-size:1rem;resize:vertical}
+    textarea:focus,select:focus{outline:none;border-color:#7c3aed}
+    .ticket-list{margin-top:1.5rem}
+    .ticket-card{background:#12122a;border-radius:10px;padding:1rem 1.2rem;margin-bottom:.8rem;border-left:4px solid #7c3aed;cursor:pointer;transition:background .2s}
+    .ticket-card:hover{background:#1a1a3a}
+    .ticket-card.replied{border-left-color:#059669}
+    .ticket-card.closed{border-left-color:#6b7280;opacity:.7}
+    .ticket-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+    .ticket-subject{font-weight:600;color:#fff}
+    .ticket-preview{font-size:.85rem;color:#9ca3af}
+    .badge{padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:600}
+    .badge-open{background:#3b1f8a;color:#a78bfa}
+    .badge-replied{background:#064e3b;color:#6ee7b7}
+    .badge-closed{background:#374151;color:#9ca3af}
+    .thread{margin-top:1.5rem}
+    .msg{padding:.8rem 1rem;border-radius:8px;margin-bottom:.6rem;max-width:85%}
+    .msg-user{background:#1e1b4b;border-left:3px solid #7c3aed;margin-left:0}
+    .msg-admin{background:#0f3324;border-left:3px solid #059669;margin-left:auto;text-align:right}
+    .msg-sender{font-size:.75rem;color:#9ca3af;margin-bottom:4px}
+    .msg-text{font-size:.9rem}
+    .reply-box{margin-top:1rem;background:#12122a;border-radius:8px;padding:1rem}
+    .btn-back{background:none;border:none;color:#7c3aed;cursor:pointer;font-size:.9rem;padding:0;margin-bottom:1rem}
+    .btn-close-ticket{background:#374151;color:#9ca3af;border:none;padding:.5rem 1rem;border-radius:6px;cursor:pointer;font-size:.85rem}
+    .tabs{display:flex;gap:.5rem;margin-bottom:1.5rem}
+    .tab{padding:.5rem 1.2rem;border-radius:8px;border:1px solid #333;background:transparent;color:#9ca3af;cursor:pointer;font-size:.9rem}
+    .tab.active{background:#7c3aed;border-color:#7c3aed;color:#fff}
+  </style>
 </head>
 <body>
-  <nav><div class="nav-brand">🎮 NexusHub</div><a href="index.html">← Back</a></nav>
+  <nav>
+    <div class="nav-brand">🎮 NexusHub</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="store.html">Store</a>
+      <a href="downloads.html">My Downloads</a>
+      <a href="support.html" class="active">Support</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
   <main>
     <h2>📩 Support</h2>
-    <p>Having issues? Fill this form and we'll respond within 24 hours.</p>
-    <iframe src="https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform?embedded=true" width="100%" height="800" frameborder="0">Loading…</iframe>
+    <p style="color:#9ca3af;margin-bottom:1.5rem">Submit a ticket and we'll respond within 24 hours.</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('new')">✉️ New Ticket</button>
+      <button class="tab" onclick="switchTab('my')">🎫 My Tickets</button>
+    </div>
+
+    <!-- New Ticket Form -->
+    <div id="tabNew">
+      <div class="ticket-form">
+        <h3>Submit a Support Ticket</h3>
+        <form id="ticketForm">
+          <label>Category</label>
+          <select id="tCategory">
+            <option value="Payment">💳 Payment Issue</option>
+            <option value="Download">📥 Download Problem</option>
+            <option value="Account">👤 Account Issue</option>
+            <option value="General">💬 General Question</option>
+            <option value="Other">🔧 Other</option>
+          </select>
+          <label>Subject <span style="color:#f87171">*</span></label>
+          <input type="text" id="tSubject" placeholder="Brief description of your issue" required>
+          <label>Message <span style="color:#f87171">*</span></label>
+          <textarea id="tMessage" rows="5" placeholder="Describe your issue in detail..." required></textarea>
+          <div id="ticketMsg"></div>
+          <button type="submit" class="btn-primary" style="margin-top:1rem">Submit Ticket</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- My Tickets List / Thread View -->
+    <div id="tabMy" style="display:none">
+      <div id="ticketListView">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3 style="color:#a78bfa">My Tickets</h3>
+          <button class="btn-primary" style="width:auto;padding:.5rem 1rem;font-size:.85rem" onclick="loadMyTickets()">🔄 Refresh</button>
+        </div>
+        <div id="ticketList"><p style="color:#9ca3af">Loading...</p></div>
+      </div>
+      <div id="ticketDetailView" style="display:none">
+        <button class="btn-back" onclick="showTicketList()">← Back to tickets</button>
+        <div id="ticketDetail"></div>
+      </div>
+    </div>
   </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    if (!isLoggedIn()) window.location.href = 'login.html';
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tabNew').style.display = name === 'new' ? 'block' : 'none';
+      document.getElementById('tabMy').style.display = name === 'my' ? 'block' : 'none';
+      if (name === 'my') loadMyTickets();
+    }
+
+    document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('ticketMsg');
+      const btn = e.target.querySelector('button[type=submit]');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        const res = await apiCall('/support', 'POST', {
+          action: 'create',
+          category: document.getElementById('tCategory').value,
+          subject: document.getElementById('tSubject').value.trim(),
+          message: document.getElementById('tMessage').value.trim()
+        });
+        if (res.success) {
+          msg.innerHTML = `<div class="message success">✅ Ticket ${res.ticket_id} submitted! We'll reply within 24 hours.</div>`;
+          document.getElementById('ticketForm').reset();
+          btn.textContent = 'Submitted';
+        } else {
+          msg.innerHTML = `<div class="message error">${res.error || 'Failed. Try again.'}</div>`;
+          btn.disabled = false; btn.textContent = 'Submit Ticket';
+        }
+      } catch {
+        msg.innerHTML = '<div class="message error">Network error. Try again.</div>';
+        btn.disabled = false; btn.textContent = 'Submit Ticket';
+      }
+    });
+
+    async function loadMyTickets() {
+      const el = document.getElementById('ticketList');
+      el.innerHTML = '<p style="color:#9ca3af">Loading...</p>';
+      try {
+        const tickets = await apiCall('/support?action=my-tickets');
+        if (!tickets.length) { el.innerHTML = '<p style="color:#9ca3af">No tickets yet. Submit one above!</p>'; return; }
+        el.innerHTML = tickets.map(t => `
+          <div class="ticket-card ${t.status}" onclick="openTicket('${t.ticket_id}')">
+            <div class="ticket-meta">
+              <span class="ticket-subject">${t.subject}</span>
+              <span class="badge badge-${t.status}">${t.status}</span>
+            </div>
+            <div class="ticket-meta" style="margin-bottom:.3rem">
+              <span style="font-size:.8rem;color:#6d28d9">${t.category}</span>
+              <span style="font-size:.75rem;color:#6b7280">${new Date(t.created_at).toLocaleDateString()}</span>
+            </div>
+            ${t.last_reply ? `<div class="ticket-preview">${t.last_reply}...</div>` : ''}
+          </div>`).join('');
+      } catch { el.innerHTML = '<p style="color:#f87171">Failed to load tickets.</p>'; }
+    }
+
+    async function openTicket(ticketId) {
+      document.getElementById('ticketListView').style.display = 'none';
+      document.getElementById('ticketDetailView').style.display = 'block';
+      const el = document.getElementById('ticketDetail');
+      el.innerHTML = '<p style="color:#9ca3af">Loading...</p>';
+      try {
+        const t = await apiCall(`/support?action=ticket-detail&ticket_id=${ticketId}`);
+        el.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <div>
+              <h3 style="color:#a78bfa">${t.subject}</h3>
+              <span style="font-size:.8rem;color:#6b7280">${t.category} · ${new Date(t.created_at).toLocaleDateString()}</span>
+            </div>
+            <span class="badge badge-${t.status}">${t.status}</span>
+          </div>
+          <div class="thread">${(t.messages || []).map(m => `
+            <div class="msg msg-${m.from}">
+              <div class="msg-sender">${m.from === 'admin' ? '🛡️ Support Team' : '👤 You'} · ${new Date(m.sent_at).toLocaleString()}</div>
+              <div class="msg-text">${m.text}</div>
+            </div>`).join('')}
+          </div>
+          ${t.status !== 'closed' ? `
+          <div class="reply-box">
+            <textarea id="userReply" rows="3" placeholder="Add more information..." style="width:100%;padding:.7rem;border-radius:6px;border:1px solid #333;background:#1a1a3a;color:#fff;resize:vertical"></textarea>
+            <div style="display:flex;gap:.5rem;margin-top:.5rem">
+              <button class="btn-primary" style="width:auto;padding:.5rem 1.2rem;font-size:.85rem" onclick="addUserMessage('${t.ticket_id}')">Send</button>
+              <button class="btn-close-ticket" onclick="closeTicket('${t.ticket_id}')">Mark as Resolved</button>
+            </div>
+          </div>` : '<p style="color:#6b7280;margin-top:1rem;font-size:.9rem">This ticket is closed.</p>'}
+        `;
+      } catch { el.innerHTML = '<p style="color:#f87171">Failed to load ticket.</p>'; }
+    }
+
+    async function addUserMessage(ticketId) {
+      const text = document.getElementById('userReply').value.trim();
+      if (!text) return;
+      await apiCall('/support', 'POST', { action: 'create', subject: 'Follow-up', message: text });
+      openTicket(ticketId);
+    }
+
+    async function closeTicket(ticketId) {
+      if (!confirm('Mark this ticket as resolved?')) return;
+      await apiCall('/support', 'POST', { action: 'close', ticket_id: ticketId });
+      showTicketList();
+    }
+
+    function showTicketList() {
+      document.getElementById('ticketDetailView').style.display = 'none';
+      document.getElementById('ticketListView').style.display = 'block';
+      loadMyTickets();
+    }
+  </script>
 </body>
 </html>
