@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>NexusHub - Game Store</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">🎮 NexusHub</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="store.html">Store</a>
+      <a href="downloads.html" id="downloadsLink" style="display:none;">My Downloads</a>
+      <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin</a>
+      <a href="login.html" id="loginLink">Login</a>
+      <a href="#" id="logoutLink" style="display:none;" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+  <main>
+    <section class="hero">
+      <h1>Premium Game Assets & Mods</h1>
+      <p>Buy once, download forever. Instant delivery.</p>
+      <a href="store.html" class="btn-primary">Browse Store</a>
+    </section>
+    <section class="features">
+      <div class="feature-card"><h3>🔒 Secure Payments</h3><p>Powered by Razorpay</p></div>
+      <div class="feature-card"><h3>⚡ Instant Download</h3><p>Get files immediately</p></div>
+      <div class="feature-card"><h3>📱 Mobile Friendly</h3><p>Buy on any device</p></div>
+    </section>
+  </main>
+  <footer><p>© 2026 NexusHub | <a href="support.html">Support</a></p></footer>
+  <script src="js/app.js"></script>
+  <script>checkAuth();</script>
+</body>
+</html>
